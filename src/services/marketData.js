@@ -2,14 +2,18 @@
 
 const config = require('../config');
 
-const YAHOO_BASE   = 'https://query1.finance.yahoo.com/v8/finance/chart';
-const YAHOO_SEARCH = 'https://query1.finance.yahoo.com/v1/finance/search';
+const YAHOO_BASE   = 'https://query2.finance.yahoo.com/v8/finance/chart';
+const YAHOO_SEARCH = 'https://query2.finance.yahoo.com/v1/finance/search';
 const FRED_BASE    = 'https://api.stlouisfed.org/fred/series/observations';
 const AV_BASE      = 'https://www.alphavantage.co/query';
 
 const YAHOO_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-  'Accept': 'application/json',
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Accept': 'application/json, text/plain, */*',
+  'Accept-Language': 'en-US,en;q=0.9',
+  'Accept-Encoding': 'gzip, deflate, br',
+  'Referer': 'https://finance.yahoo.com/',
+  'Origin': 'https://finance.yahoo.com',
 };
 
 // ─── Yahoo Finance ────────────────────────────────────────────────────────────
@@ -220,7 +224,8 @@ function formatStockForPrompt(stock) {
  * 입력값이 티커 형식인지 판단 (영문+숫자+.^- 조합, 공백 없음)
  */
 function looksLikeTicker(input) {
-  return /^[A-Za-z0-9.\-^]{1,12}$/.test(input);
+  // 대문자+숫자+특수문자(.^-)만 허용 — 소문자 포함 시 종목명으로 판단
+  return /^[A-Z0-9.\-^]{1,10}$/.test(input);
 }
 
 /**
@@ -235,19 +240,46 @@ async function findTicker(query) {
     return { ticker: trimmed.toUpperCase(), name: trimmed.toUpperCase() };
   }
 
-  const url = `${YAHOO_SEARCH}?q=${encodeURIComponent(trimmed)}&quotesCount=5&newsCount=0&listsCount=0`;
-  const res  = await fetch(url, { headers: YAHOO_HEADERS });
-  if (!res.ok) throw new Error(`Yahoo 검색 실패: ${res.status}`);
+  // 1차: Yahoo Finance 검색
+  try {
+    const url = `${YAHOO_SEARCH}?q=${encodeURIComponent(trimmed)}&quotesCount=5&newsCount=0&listsCount=0&lang=en-US&region=US`;
+    const res  = await fetch(url, { headers: YAHOO_HEADERS });
+    if (res.ok) {
+      const data   = await res.json();
+      const quotes = (data.quotes || []).filter(
+        (q) => q.symbol && ['EQUITY', 'ETF', 'MUTUALFUND'].includes(q.quoteType)
+      );
+      if (quotes.length > 0) {
+        const best = quotes[0];
+        return { ticker: best.symbol, name: best.longname || best.shortname || best.symbol };
+      }
+    }
+  } catch (_) { /* 폴백으로 진행 */ }
 
-  const data   = await res.json();
-  const quotes = (data.quotes || []).filter(
-    (q) => q.symbol && ['EQUITY', 'ETF', 'MUTUALFUND'].includes(q.quoteType)
-  );
+  // 2차: Alpha Vantage SYMBOL_SEARCH 폴백
+  if (config.alphaVantage.apiKey) {
+    try {
+      const url = `${AV_BASE}?function=SYMBOL_SEARCH&keywords=${encodeURIComponent(trimmed)}&apikey=${config.alphaVantage.apiKey}`;
+      const res  = await fetch(url);
+      if (res.ok) {
+        const data    = await res.json();
+        const matches = (data.bestMatches || []).filter(
+          (m) => m['3. type'] === 'Equity' || m['3. type'] === 'ETF'
+        );
+        if (matches.length > 0) {
+          const best = matches[0];
+          return { ticker: best['1. symbol'], name: best['2. name'] };
+        }
+      }
+    } catch (_) { /* 무시 */ }
+  }
 
-  if (quotes.length === 0) throw new Error(`"${trimmed}"에 해당하는 종목을 찾을 수 없습니다.`);
-
-  const best = quotes[0];
-  return { ticker: best.symbol, name: best.longname || best.shortname || best.symbol };
+  // 한글 포함 시 티커 직접 입력 안내
+  const hasKorean = /[\uAC00-\uD7A3]/.test(trimmed);
+  if (hasKorean) {
+    throw new Error(`한국 종목은 티커를 직접 입력하세요. (예: 삼성전자 → 005930.KS, SK하이닉스 → 000660.KS)`);
+  }
+  throw new Error(`"${trimmed}"에 해당하는 종목을 찾을 수 없습니다.`);
 }
 
 // ─── Alpha Vantage 기업 개요 ─────────────────────────────────────────────────
