@@ -6,6 +6,11 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   let response = NextResponse.next({ request });
 
+  // /login, /signup은 항상 통과 (페이지에서 로그아웃 처리)
+  if (pathname === '/login' || pathname === '/signup') {
+    return response;
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -24,26 +29,12 @@ export async function middleware(request: NextRequest) {
   );
 
   const { data: { session } } = await supabase.auth.getSession();
-  const isAuth = !!session;
 
-  // Public routes — no DB query needed
-  if (pathname === '/login' || pathname === '/signup') {
-    if (isAuth) {
-      // fetch profile to decide redirect
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role, status')
-        .eq('id', session!.user.id)
-        .single();
-      if (profile?.status !== 'approved') return NextResponse.redirect(new URL('/pending', request.url));
-      return NextResponse.redirect(new URL('/analysis', request.url));
-    }
-    return response;
+  if (!session) {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  if (!isAuth) return NextResponse.redirect(new URL('/login', request.url));
-
-  // Fetch profile for authenticated routes
+  // 인증된 유저 — profiles 조회
   const { data: profile } = await supabase
     .from('profiles')
     .select('role, status')
@@ -53,25 +44,24 @@ export async function middleware(request: NextRequest) {
   const isApproved = profile?.status === 'approved';
   const role = profile?.role as string | undefined;
 
-  // Pending page
+  // /pending 페이지
   if (pathname === '/pending') {
     if (isApproved) return NextResponse.redirect(new URL('/analysis', request.url));
     return response;
   }
 
-  if (!isApproved) return NextResponse.redirect(new URL('/pending', request.url));
+  if (!isApproved) {
+    return NextResponse.redirect(new URL('/pending', request.url));
+  }
 
-  // Admin routes
+  // /admin/* — admin만 접근
   if (pathname.startsWith('/admin')) {
     if (role !== 'admin') return NextResponse.redirect(new URL('/analysis', request.url));
-    return response;
   }
 
   return response;
 }
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|api/).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|api/).*)',],
 };
