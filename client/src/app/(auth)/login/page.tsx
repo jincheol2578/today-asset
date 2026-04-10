@@ -29,10 +29,14 @@ export default function LoginPage() {
       return;
     }
 
-    const role = data.user?.user_metadata?.role;
-    const status = data.user?.user_metadata?.status;
+    // profiles 테이블에서 status 확인
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('status')
+      .eq('id', data.user.id)
+      .single();
 
-    if (status !== 'approved') {
+    if (profile?.status !== 'approved') {
       router.push('/pending');
     } else {
       router.push('/analysis');
