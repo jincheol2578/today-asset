@@ -15,37 +15,58 @@ export function useAuth() {
     const supabase = getSupabaseClient();
 
     const fetchProfile = async (userId: string): Promise<Profile | null> => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      return data as Profile | null;
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
+        if (error) {
+          console.error('fetchProfile error:', error);
+          return null;
+        }
+        return data as Profile | null;
+      } catch (e) {
+        console.error('fetchProfile exception:', e);
+        return null;
+      }
     };
 
     const init = async () => {
-      const { data } = await supabase.auth.getSession();
-      const session: Session | null = data.session;
-      if (session?.user) {
-        const p = await fetchProfile(session.user.id);
-        setProfile(p);
-      } else {
-        setProfile(null);
-      }
-      setLoading(false);
-    };
-
-    init();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event: AuthChangeEvent, session: Session | null) => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        const session: Session | null = data.session;
         if (session?.user) {
           const p = await fetchProfile(session.user.id);
           setProfile(p);
         } else {
           setProfile(null);
         }
+      } catch (e) {
+        console.error('init error:', e);
+        setProfile(null);
+      } finally {
         setLoading(false);
+      }
+    };
+
+    init();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event: AuthChangeEvent, session: Session | null) => {
+        try {
+          if (session?.user) {
+            const p = await fetchProfile(session.user.id);
+            setProfile(p);
+          } else {
+            setProfile(null);
+          }
+        } catch (e) {
+          console.error('onAuthStateChange error:', e);
+          setProfile(null);
+        } finally {
+          setLoading(false);
+        }
       }
     );
 

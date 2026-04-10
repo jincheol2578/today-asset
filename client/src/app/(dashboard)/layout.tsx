@@ -18,13 +18,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [profile, loading, router]);
 
-  if (loading || !profile || profile.status !== 'approved') {
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-950">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-600 border-t-blue-500" />
       </div>
     );
   }
+
+  if (!profile || profile.status !== 'approved') return null;
 
   return (
     <div className="flex h-screen bg-gray-950">
