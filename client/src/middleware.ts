@@ -24,39 +24,48 @@ export async function middleware(request: NextRequest) {
   );
 
   const { data: { session } } = await supabase.auth.getSession();
-  const role = session?.user?.user_metadata?.role as string | undefined;
-  const status = session?.user?.user_metadata?.status as string | undefined;
-
   const isAuth = !!session;
-  const isApproved = status === 'approved';
 
-  // Public routes
+  // Public routes — no DB query needed
   if (pathname === '/login' || pathname === '/signup') {
     if (isAuth) {
-      if (!isApproved) return NextResponse.redirect(new URL('/pending', request.url));
+      // fetch profile to decide redirect
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, status')
+        .eq('id', session!.user.id)
+        .single();
+      if (profile?.status !== 'approved') return NextResponse.redirect(new URL('/pending', request.url));
       return NextResponse.redirect(new URL('/analysis', request.url));
     }
     return response;
   }
 
+  if (!isAuth) return NextResponse.redirect(new URL('/login', request.url));
+
+  // Fetch profile for authenticated routes
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, status')
+    .eq('id', session.user.id)
+    .single();
+
+  const isApproved = profile?.status === 'approved';
+  const role = profile?.role as string | undefined;
+
   // Pending page
   if (pathname === '/pending') {
-    if (!isAuth) return NextResponse.redirect(new URL('/login', request.url));
     if (isApproved) return NextResponse.redirect(new URL('/analysis', request.url));
     return response;
   }
 
+  if (!isApproved) return NextResponse.redirect(new URL('/pending', request.url));
+
   // Admin routes
   if (pathname.startsWith('/admin')) {
-    if (!isAuth) return NextResponse.redirect(new URL('/login', request.url));
-    if (!isApproved) return NextResponse.redirect(new URL('/pending', request.url));
     if (role !== 'admin') return NextResponse.redirect(new URL('/analysis', request.url));
     return response;
   }
-
-  // Dashboard routes
-  if (!isAuth) return NextResponse.redirect(new URL('/login', request.url));
-  if (!isApproved) return NextResponse.redirect(new URL('/pending', request.url));
 
   return response;
 }
