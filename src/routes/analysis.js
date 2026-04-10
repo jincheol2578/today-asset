@@ -108,6 +108,31 @@ router.post('/stock', async (req, res) => {
 });
 
 /**
+ * GET /api/cron/analyze
+ * Vercel Cron Jobs가 호출하는 엔드포인트 (vercel.json schedule 참고)
+ * 평일 09:00 KST = 00:00 UTC 자동 실행
+ */
+router.get('/cron/analyze', async (req, res) => {
+  // Vercel은 Authorization 헤더로 CRON_SECRET을 검증 (선택적 보안)
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret) {
+    const auth = req.headers.authorization;
+    if (auth !== `Bearer ${cronSecret}`) {
+      return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+  }
+
+  try {
+    const { runAnalysis } = require('../services/scheduler');
+    const record = await runAnalysis();
+    res.json({ success: true, date: record.date });
+  } catch (err) {
+    console.error('[GET /cron/analyze]', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
  * GET /api/market
  */
 router.get('/market', async (req, res) => {
