@@ -6,7 +6,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   let response = NextResponse.next({ request });
 
-  // /login, /signup은 항상 통과 (페이지에서 로그아웃 처리)
+  // /login, /signup은 항상 통과
   if (pathname === '/login' || pathname === '/signup') {
     return response;
   }
@@ -28,23 +28,22 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { data: { session } } = await supabase.auth.getSession();
+  // getUser()는 서버에서 토큰 검증 + refresh token 자동 갱신
+  const { data: { user }, error } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (error || !user) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // 인증된 유저 — profiles 조회
   const { data: profile } = await supabase
     .from('profiles')
     .select('role, status')
-    .eq('id', session.user.id)
+    .eq('id', user.id)
     .single();
 
   const isApproved = profile?.status === 'approved';
   const role = profile?.role as string | undefined;
 
-  // /pending 페이지
   if (pathname === '/pending') {
     if (isApproved) return NextResponse.redirect(new URL('/analysis', request.url));
     return response;
@@ -54,9 +53,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/pending', request.url));
   }
 
-  // /admin/* — admin만 접근
-  if (pathname.startsWith('/admin')) {
-    if (role !== 'admin') return NextResponse.redirect(new URL('/analysis', request.url));
+  if (pathname.startsWith('/admin') && role !== 'admin') {
+    return NextResponse.redirect(new URL('/analysis', request.url));
   }
 
   return response;

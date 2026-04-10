@@ -17,6 +17,10 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 
   if (res.status === 401 || res.status === 403) {
     const body = await res.json().catch(() => ({}));
+    // 세션 만료 → 로그아웃 후 로그인으로 이동
+    supabase.auth.signOut().finally(() => {
+      window.location.href = '/login';
+    });
     throw Object.assign(new Error(body.error || `HTTP ${res.status}`), { status: res.status });
   }
 

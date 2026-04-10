@@ -4,22 +4,23 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center rounded-full text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#494fdf] focus-visible:ring-offset-2 focus-visible:ring-offset-[#191c1f] disabled:pointer-events-none disabled:opacity-40 select-none',
   {
     variants: {
       variant: {
-        default: 'bg-blue-600 text-white hover:bg-blue-700',
-        destructive: 'bg-red-600 text-white hover:bg-red-700',
-        outline: 'border border-gray-600 bg-transparent text-gray-200 hover:bg-gray-800',
-        ghost: 'text-gray-300 hover:bg-gray-800 hover:text-white',
-        secondary: 'bg-gray-700 text-gray-200 hover:bg-gray-600',
-        link: 'text-blue-400 underline-offset-4 hover:underline',
+        default:     'bg-[#494fdf] text-white hover:bg-[#3d43c7] active:scale-[0.98]',
+        destructive: 'bg-[#e23b4a] text-white hover:bg-[#c73040] active:scale-[0.98]',
+        outline:     'border border-[rgba(255,255,255,0.12)] bg-transparent text-[#f4f4f4] hover:bg-[rgba(255,255,255,0.05)]',
+        ghost:       'bg-transparent text-[#8d969e] hover:bg-[rgba(255,255,255,0.05)] hover:text-[#f4f4f4]',
+        secondary:   'bg-[#1e2227] text-[#f4f4f4] hover:bg-[#252a30] border border-[rgba(255,255,255,0.07)]',
+        success:     'bg-[#00a87e] text-white hover:bg-[#009970] active:scale-[0.98]',
+        link:        'text-[#494fdf] underline-offset-4 hover:underline rounded-none',
       },
       size: {
-        default: 'h-9 px-4 py-2',
-        sm: 'h-8 rounded-md px-3 text-xs',
-        lg: 'h-10 rounded-md px-8',
-        icon: 'h-9 w-9',
+        default: 'h-10 px-6 py-2.5',
+        sm:      'h-8 px-4 text-xs',
+        lg:      'h-12 px-8 text-base',
+        icon:    'h-9 w-9',
       },
     },
     defaultVariants: { variant: 'default', size: 'default' },

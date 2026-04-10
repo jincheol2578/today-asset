@@ -17,7 +17,6 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // 로그인 페이지 진입 시 항상 로그아웃
   useEffect(() => {
     const supabase = getSupabaseClient();
     supabase.auth.signOut().then(() => setProfile(null));
@@ -37,63 +36,52 @@ export default function LoginPage() {
       return;
     }
 
-    // profiles 테이블에서 status 확인
     const { data: profile } = await supabase
       .from('profiles')
       .select('status')
       .eq('id', data.user.id)
       .single();
 
-    if (profile?.status !== 'approved') {
-      router.push('/pending');
-    } else {
-      router.push('/analysis');
-    }
+    router.push(profile?.status === 'approved' ? '/analysis' : '/pending');
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-950">
-      <div className="w-full max-w-sm space-y-6 px-4">
-        <div className="flex flex-col items-center gap-2">
-          <TrendingUp className="h-8 w-8 text-blue-400" />
-          <h1 className="text-2xl font-bold text-gray-100">TodayAsset</h1>
-          <p className="text-sm text-gray-400">로그인</p>
+    <div className="flex min-h-screen items-center justify-center bg-[#191c1f]">
+      <div className="w-full max-w-sm space-y-8 px-4">
+        <div className="flex flex-col items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#494fdf]">
+            <TrendingUp className="h-6 w-6 text-white" />
+          </div>
+          <h1 className="text-2xl font-semibold tracking-tight text-[#f4f4f4]">TodayAsset</h1>
+          <p className="text-sm text-[#8d969e]">계정에 로그인하세요</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-300">이메일</label>
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="your@email.com"
-              required
-              autoComplete="email"
-            />
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-[#8d969e]">이메일</label>
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+              placeholder="your@email.com" required autoComplete="email" />
           </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-300">비밀번호</label>
-            <Input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              autoComplete="current-password"
-            />
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-[#8d969e]">비밀번호</label>
+            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••" required autoComplete="current-password" />
           </div>
 
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && (
+            <div className="rounded-xl border border-[#e23b4a]/25 bg-[#e23b4a]/10 px-4 py-3">
+              <p className="text-sm text-[#e23b4a]">{error}</p>
+            </div>
+          )}
 
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button type="submit" className="w-full" size="lg" disabled={loading}>
             {loading ? '로그인 중...' : '로그인'}
           </Button>
         </form>
 
-        <p className="text-center text-sm text-gray-400">
+        <p className="text-center text-sm text-[#8d969e]">
           계정이 없으신가요?{' '}
-          <Link href="/signup" className="text-blue-400 hover:underline">
+          <Link href="/signup" className="font-medium text-[#494fdf] hover:text-[#7b80f0] transition-colors">
             회원가입
           </Link>
         </p>

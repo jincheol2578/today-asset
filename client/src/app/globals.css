@@ -1,29 +1,42 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
   color-scheme: dark;
+
+  /* Revolut-inspired design tokens */
+  --rv-dark:        #191c1f;
+  --rv-surface:     #1e2227;
+  --rv-surface-2:   #252a30;
+  --rv-blue:        #494fdf;
+  --rv-blue-hover:  #3d43c7;
+  --rv-teal:        #00a87e;
+  --rv-danger:      #e23b4a;
+  --rv-warning:     #ec7e00;
+  --rv-text-1:      #f4f4f4;
+  --rv-text-2:      #8d969e;
+  --rv-text-3:      #505a63;
+  --rv-border:      rgba(255, 255, 255, 0.07);
+  --rv-border-2:    rgba(255, 255, 255, 0.12);
 }
 
 body {
-  background-color: #030712;
-  color: #f3f4f6;
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--rv-dark);
+  color: var(--rv-text-1);
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Prose-like markdown output */
-.prose-dark p { margin-bottom: 0.75rem; }
-.prose-dark ul { list-style: disc; padding-left: 1.5rem; margin-bottom: 0.75rem; }
-.prose-dark ol { list-style: decimal; padding-left: 1.5rem; margin-bottom: 0.75rem; }
-.prose-dark li { margin-bottom: 0.25rem; }
-.prose-dark h1, .prose-dark h2, .prose-dark h3 { font-weight: 600; margin-bottom: 0.5rem; color: #e5e7eb; }
-.prose-dark h1 { font-size: 1.25rem; }
-.prose-dark h2 { font-size: 1.1rem; }
-.prose-dark h3 { font-size: 1rem; }
-.prose-dark strong { color: #f9fafb; font-weight: 600; }
-.prose-dark code { background: #1f2937; padding: 0.1rem 0.3rem; border-radius: 0.25rem; font-size: 0.875rem; }
-.prose-dark hr { border-color: #374151; margin: 1rem 0; }
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--rv-border-2); border-radius: 9999px; }
+
+/* Analysis content */
+.analysis-content { white-space: pre-wrap; line-height: 1.7; color: var(--rv-text-1); }
 
 @layer utilities {
   .text-balance { text-wrap: balance; }
