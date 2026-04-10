@@ -2,6 +2,9 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { RefreshCw } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { api } from '@/lib/api';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
@@ -9,9 +12,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { StockSearchInput } from '@/components/StockSearchInput';
+import { StockChart, type CandleData } from '@/components/StockChart';
 import { formatDate } from '@/lib/utils';
 
-interface StockData {
+interface StockResult {
   ticker: string;
   name: string;
   analysis: string;
@@ -21,15 +25,36 @@ interface StockData {
 function StockContent() {
   const searchParams = useSearchParams();
   const [selectedTicker, setSelectedTicker] = useState('');
-  const [result, setResult] = useState<StockData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [result, setResult]     = useState<StockResult | null>(null);
+  const [candles, setCandles]   = useState<CandleData[]>([]);
+  const [currency, setCurrency] = useState('USD');
+  const [loading, setLoading]   = useState(false);
+  const [chartLoading, setChartLoading] = useState(false);
+  const [error, setError]       = useState('');
+
+  const loadChart = async (ticker: string) => {
+    setChartLoading(true);
+    try {
+      const res = await api.getStockChart(ticker, '1y');
+      setCandles(res.data.candles);
+      setCurrency(res.data.currency);
+    } catch {
+      setCandles([]);
+    } finally {
+      setChartLoading(false);
+    }
+  };
 
   const doAnalyze = async (ticker: string) => {
     if (!ticker.trim()) return;
     setLoading(true);
     setError('');
     setResult(null);
+    setCandles([]);
+
+    // 차트와 AI 분석 병렬 실행
+    loadChart(ticker);
+
     try {
       const res = await api.postStock(ticker.trim());
       setResult(res.data);
@@ -57,14 +82,12 @@ function StockContent() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-4 pt-4">
+      {/* 검색창 */}
       <div className="flex gap-2">
-        <StockSearchInput
-          onSelect={handleSelect}
-          disabled={loading}
-          initialValue=""
-        />
+        <StockSearchInput onSelect={handleSelect} disabled={loading} />
         {selectedTicker && !loading && (
-          <Button onClick={() => doAnalyze(selectedTicker)}>
+          <Button variant="outline" size="sm" onClick={() => doAnalyze(selectedTicker)} className="shrink-0">
+            <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
             재분석
           </Button>
         )}
@@ -76,13 +99,33 @@ function StockContent() {
         </div>
       )}
 
+      {/* 차트 */}
+      {(chartLoading || candles.length > 0) && (
+        <Card>
+          <CardContent className="pt-5">
+            {chartLoading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-[280px] w-full" />
+              </div>
+            ) : (
+              <StockChart
+                candles={candles}
+                ticker={selectedTicker}
+                currency={currency}
+              />
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* AI 분석 결과 */}
       {loading && (
         <Card>
           <CardHeader>
             <Skeleton className="h-5 w-32" />
           </CardHeader>
           <CardContent className="space-y-3">
-            {[...Array(6)].map((_, i) => (
+            {[...Array(8)].map((_, i) => (
               <Skeleton key={i} className={`h-4 ${i % 3 === 2 ? 'w-3/5' : i % 2 === 0 ? 'w-full' : 'w-4/5'}`} />
             ))}
           </CardContent>
@@ -93,7 +136,7 @@ function StockContent() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-base">
                 {result.name}
                 <Badge variant="outline">{result.ticker}</Badge>
               </CardTitle>
@@ -101,15 +144,17 @@ function StockContent() {
             </div>
           </CardHeader>
           <CardContent>
-            <pre className="analysis-content text-sm">{result.analysis}</pre>
+            <div className="analysis-content text-sm">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{result.analysis}</ReactMarkdown>
+            </div>
           </CardContent>
         </Card>
       )}
 
-      {!loading && !result && !error && (
+      {!loading && !result && !error && !chartLoading && candles.length === 0 && (
         <div className="flex flex-col items-center gap-3 py-20 text-[#505a63]">
           <p className="text-sm">종목명이나 티커를 검색해서 선택하세요</p>
-          <p className="text-xs">예: 삼성전자, 애플, AAPL, 005930.KS</p>
+          <p className="text-xs">예: 삼성전자, AAPL, 005930.KS</p>
         </div>
       )}
     </div>

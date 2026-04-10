@@ -59,6 +59,17 @@ export const api = {
       `/api/search?q=${encodeURIComponent(q)}`
     ),
 
+  // 차트 데이터
+  getStockChart: (ticker: string, range = '1y') =>
+    apiFetch<{
+      success: boolean;
+      data: {
+        ticker: string;
+        currency: string;
+        candles: { date: string; open: number; high: number; low: number; close: number; ma50: number | null; ma200: number | null }[];
+      };
+    }>(`/api/stock/chart?ticker=${encodeURIComponent(ticker)}&range=${range}`),
+
   // 관심종목
   getWatchlist: () => apiFetch<{ success: boolean; data: { ticker: string; added_at: string }[] }>('/api/watchlist'),
   addWatchlist: (ticker: string) =>

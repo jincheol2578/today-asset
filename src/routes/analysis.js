@@ -7,6 +7,7 @@ const {
   getAllMarketData, formatForPrompt,
   getStockData, formatStockForPrompt,
   findTicker, getCompanyOverview, formatCompanyForPrompt,
+  getChartData,
 } = require('../services/marketData');
 const { getMarketNews, getStockNews } = require('../services/news');
 const { requireAuth } = require('../middleware/auth');
@@ -135,14 +136,58 @@ router.get('/cron/analyze', async (req, res) => {
 });
 
 /**
+ * GET /api/stock/chart?ticker=AAPL&range=1y
+ * 차트용 OHLCV + MA50/MA200 데이터
+ */
+router.get('/stock/chart', requireAuth('user'), async (req, res) => {
+  const { ticker, range = '1y' } = req.query;
+  if (!ticker) return res.status(400).json({ success: false, error: 'ticker required' });
+  try {
+    const chartData = await getChartData(ticker, range);
+    res.json({ success: true, data: chartData });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
  * GET /api/search?q=keyword
- * DB에서 종목명/티커 prefix 검색 (드롭다운용)
+ * 1차: DB prefix 검색 / 2차: Yahoo Finance 검색 fallback
  */
 router.get('/search', requireAuth('user'), async (req, res) => {
   const q = (req.query.q || '').trim();
   if (!q || q.length < 1) return res.json({ success: true, data: [] });
+
   try {
-    const results = await searchStocks(q, 10);
+    // 1차: DB 검색
+    let results = await searchStocks(q, 10);
+
+    // 2차: DB 결과 없으면 Yahoo Finance 검색
+    if (results.length === 0) {
+      try {
+        const YAHOO_SEARCH = 'https://query2.finance.yahoo.com/v1/finance/search';
+        const YAHOO_HEADERS = {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+          'Accept': 'application/json',
+          'Referer': 'https://finance.yahoo.com/',
+        };
+        const url = `${YAHOO_SEARCH}?q=${encodeURIComponent(q)}&quotesCount=8&newsCount=0&lang=en-US`;
+        const yaRes = await fetch(url, { headers: YAHOO_HEADERS });
+        if (yaRes.ok) {
+          const yaData = await yaRes.json();
+          results = (yaData.quotes || [])
+            .filter((qt) => qt.symbol && ['EQUITY', 'ETF'].includes(qt.quoteType))
+            .slice(0, 8)
+            .map((qt) => ({
+              code:   qt.symbol,
+              name:   qt.longname || qt.shortname || qt.symbol,
+              market: qt.exchange || qt.market || '',
+              ticker: qt.symbol,
+            }));
+        }
+      } catch (_) { /* Yahoo 실패 시 빈 배열 */ }
+    }
+
     res.json({ success: true, data: results });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

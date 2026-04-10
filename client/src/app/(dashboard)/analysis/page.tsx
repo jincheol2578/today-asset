@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { RefreshCw, BarChart2 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { api } from '@/lib/api';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
@@ -77,7 +79,9 @@ export default function AnalysisPage() {
               ))}
             </div>
           ) : content ? (
-            <pre className="analysis-content text-sm">{content}</pre>
+            <div className="analysis-content text-sm">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+            </div>
           ) : (
             <div className="flex flex-col items-center gap-3 py-16 text-[#505a63]">
               <BarChart2 className="h-10 w-10" />

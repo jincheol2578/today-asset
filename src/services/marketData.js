@@ -361,6 +361,55 @@ ${f(overview.description).slice(0, 600)}${overview.description?.length > 600 ? '
 `.trim();
 }
 
+/**
+ * 차트용 OHLCV 데이터 반환
+ * @param {string} ticker
+ * @param {string} range  '3mo' | '6mo' | '1y' | '2y'
+ */
+async function getChartData(ticker, range = '1y') {
+  const data = await fetchYahoo(ticker, range, '1d');
+  const result = data.chart?.result?.[0];
+  if (!result) throw new Error(`Yahoo Finance: ${ticker} 차트 데이터 없음`);
+
+  const timestamps = result.timestamp || [];
+  const quote = result.indicators.quote[0];
+  const closes = result.indicators.adjclose?.[0]?.adjclose || quote.close;
+
+  // MA 계산 헬퍼
+  const calcMALine = (prices, period) => {
+    const line = [];
+    for (let i = 0; i < prices.length; i++) {
+      if (i < period - 1) { line.push(null); continue; }
+      const slice = prices.slice(i - period + 1, i + 1).filter((v) => v != null);
+      line.push(slice.length === period ? slice.reduce((a, b) => a + b, 0) / period : null);
+    }
+    return line;
+  };
+
+  const ma50Line  = calcMALine(closes, 50);
+  const ma200Line = calcMALine(closes, 200);
+  const currency  = result.meta.currency || 'USD';
+
+  const candles = timestamps.map((ts, i) => {
+    const o = quote.open[i], h = quote.high[i], l = quote.low[i], c = closes[i];
+    if (o == null || c == null) return null;
+    // YYYY-MM-DD 형식 (lightweight-charts / recharts 공용)
+    const d = new Date(ts * 1000);
+    const date = d.toISOString().slice(0, 10);
+    return {
+      date,
+      open:   +o.toFixed(4),
+      high:   +h.toFixed(4),
+      low:    +l.toFixed(4),
+      close:  +c.toFixed(4),
+      ma50:   ma50Line[i]  != null ? +ma50Line[i].toFixed(4)  : null,
+      ma200:  ma200Line[i] != null ? +ma200Line[i].toFixed(4) : null,
+    };
+  }).filter(Boolean);
+
+  return { ticker, currency, candles };
+}
+
 module.exports = {
   getAllMarketData,
   formatForPrompt,
@@ -369,4 +418,5 @@ module.exports = {
   findTicker,
   getCompanyOverview,
   formatCompanyForPrompt,
+  getChartData,
 };
