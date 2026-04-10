@@ -13,7 +13,18 @@ const app = express();
 
 // CORS — 프론트엔드 도메인 허용
 app.use(cors({
-  origin: [config.frontendUrl, 'http://localhost:3001'].filter(Boolean),
+  origin: (origin, callback) => {
+    const allowed = [
+      config.frontendUrl,
+      'http://localhost:3001',
+    ].filter(Boolean);
+    // vercel.app 프리뷰 URL 전체 허용
+    if (!origin || allowed.includes(origin) || /\.vercel\.app$/.test(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 
