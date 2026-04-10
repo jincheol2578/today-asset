@@ -53,6 +53,12 @@ export const api = {
   getHistoryDate: (date: string) =>
     apiFetch<{ success: boolean; data: { date: string; content: string } }>(`/api/history/${date}`),
 
+  // 종목 검색 (드롭다운)
+  searchStocks: (q: string) =>
+    apiFetch<{ success: boolean; data: { code: string; name: string; market: string; ticker: string }[] }>(
+      `/api/search?q=${encodeURIComponent(q)}`
+    ),
+
   // 관심종목
   getWatchlist: () => apiFetch<{ success: boolean; data: { ticker: string; added_at: string }[] }>('/api/watchlist'),
   addWatchlist: (ticker: string) =>

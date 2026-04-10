@@ -21,13 +21,9 @@ export function useAuth() {
           .select('*')
           .eq('id', userId)
           .single();
-        if (error) {
-          console.error('fetchProfile error:', error);
-          return null;
-        }
+        if (error) return null;
         return data as Profile | null;
-      } catch (e) {
-        console.error('fetchProfile exception:', e);
+      } catch {
         return null;
       }
     };
@@ -40,11 +36,13 @@ export function useAuth() {
           const p = await fetchProfile(session.user.id);
           setProfile(p);
         } else {
+          // 세션 없음 → 로그인 페이지로
           setProfile(null);
+          router.replace('/login');
         }
-      } catch (e) {
-        console.error('init error:', e);
+      } catch {
         setProfile(null);
+        router.replace('/login');
       } finally {
         setLoading(false);
       }
@@ -53,17 +51,20 @@ export function useAuth() {
     init();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event: AuthChangeEvent, session: Session | null) => {
+      async (event: AuthChangeEvent, session: Session | null) => {
         try {
+          if (event === 'SIGNED_OUT' || !session) {
+            setProfile(null);
+            router.replace('/login');
+            return;
+          }
           if (session?.user) {
             const p = await fetchProfile(session.user.id);
             setProfile(p);
-          } else {
-            setProfile(null);
           }
-        } catch (e) {
-          console.error('onAuthStateChange error:', e);
+        } catch {
           setProfile(null);
+          router.replace('/login');
         } finally {
           setLoading(false);
         }
@@ -71,7 +72,7 @@ export function useAuth() {
     );
 
     return () => subscription.unsubscribe();
-  }, [setProfile, setLoading]);
+  }, [setProfile, setLoading, router]);
 
   const signOut = async () => {
     const supabase = getSupabaseClient();

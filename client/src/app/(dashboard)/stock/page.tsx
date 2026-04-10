@@ -2,14 +2,13 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Search } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { StockSearchInput } from '@/components/StockSearchInput';
 import { formatDate } from '@/lib/utils';
 
 interface StockData {
@@ -21,18 +20,18 @@ interface StockData {
 
 function StockContent() {
   const searchParams = useSearchParams();
-  const [query, setQuery] = useState(searchParams.get('q') || '');
+  const [selectedTicker, setSelectedTicker] = useState('');
   const [result, setResult] = useState<StockData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const doSearch = async (q: string) => {
-    if (!q.trim()) return;
+  const doAnalyze = async (ticker: string) => {
+    if (!ticker.trim()) return;
     setLoading(true);
     setError('');
     setResult(null);
     try {
-      const res = await api.postStock(q.trim());
+      const res = await api.postStock(ticker.trim());
       setResult(res.data);
     } catch (err: unknown) {
       const e = err as { message?: string };
@@ -42,36 +41,40 @@ function StockContent() {
     }
   };
 
-  // Auto-search when coming from watchlist
+  // watchlist에서 q 파라미터로 넘어올 때 자동 분석
   useEffect(() => {
     const q = searchParams.get('q');
     if (q) {
-      setQuery(q);
-      doSearch(q);
+      setSelectedTicker(q);
+      doAnalyze(q);
     }
   }, [searchParams]);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    doSearch(query);
+  const handleSelect = (stock: { ticker: string; name: string }) => {
+    setSelectedTicker(stock.ticker);
+    doAnalyze(stock.ticker);
   };
 
   return (
     <div className="mx-auto max-w-4xl space-y-4 pt-4">
-      <form onSubmit={handleSearch} className="flex gap-2">
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="종목명 또는 티커 (예: 삼성전자, AAPL)"
-          className="flex-1"
+      <div className="flex gap-2">
+        <StockSearchInput
+          onSelect={handleSelect}
+          disabled={loading}
+          initialValue=""
         />
-        <Button type="submit" disabled={loading}>
-          <Search className="mr-2 h-4 w-4" />
-          {loading ? '분석 중...' : '분석'}
-        </Button>
-      </form>
+        {selectedTicker && !loading && (
+          <Button onClick={() => doAnalyze(selectedTicker)}>
+            재분석
+          </Button>
+        )}
+      </div>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && (
+        <div className="rounded-xl border border-[#e23b4a]/25 bg-[#e23b4a]/10 px-4 py-3">
+          <p className="text-sm text-[#e23b4a]">{error}</p>
+        </div>
+      )}
 
       {loading && (
         <Card>
@@ -79,16 +82,14 @@ function StockContent() {
             <Skeleton className="h-5 w-32" />
           </CardHeader>
           <CardContent className="space-y-3">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-4/5" />
-            <Skeleton className="h-4 w-3/5" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-2/3" />
+            {[...Array(6)].map((_, i) => (
+              <Skeleton key={i} className={`h-4 ${i % 3 === 2 ? 'w-3/5' : i % 2 === 0 ? 'w-full' : 'w-4/5'}`} />
+            ))}
           </CardContent>
         </Card>
       )}
 
-      {result && (
+      {result && !loading && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -96,13 +97,20 @@ function StockContent() {
                 {result.name}
                 <Badge variant="outline">{result.ticker}</Badge>
               </CardTitle>
-              <span className="text-xs text-gray-500">{formatDate(result.analyzedAt)}</span>
+              <span className="text-xs text-[#505a63]">{formatDate(result.analyzedAt)}</span>
             </div>
           </CardHeader>
           <CardContent>
-            <pre className="whitespace-pre-wrap text-sm leading-relaxed text-gray-300">{result.analysis}</pre>
+            <pre className="analysis-content text-sm">{result.analysis}</pre>
           </CardContent>
         </Card>
+      )}
+
+      {!loading && !result && !error && (
+        <div className="flex flex-col items-center gap-3 py-20 text-[#505a63]">
+          <p className="text-sm">종목명이나 티커를 검색해서 선택하세요</p>
+          <p className="text-xs">예: 삼성전자, 애플, AAPL, 005930.KS</p>
+        </div>
       )}
     </div>
   );
@@ -112,7 +120,7 @@ export default function StockPage() {
   return (
     <>
       <Header title="종목 분석" />
-      <Suspense fallback={<div className="pt-4 text-gray-500">로딩 중...</div>}>
+      <Suspense fallback={<div className="pt-4 text-[#505a63] text-sm">로딩 중...</div>}>
         <StockContent />
       </Suspense>
     </>

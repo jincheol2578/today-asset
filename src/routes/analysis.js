@@ -10,6 +10,7 @@ const {
 } = require('../services/marketData');
 const { getMarketNews, getStockNews } = require('../services/news');
 const { requireAuth } = require('../middleware/auth');
+const { searchStocks } = require('../services/krxSearch');
 
 const router = express.Router();
 
@@ -129,6 +130,21 @@ router.get('/cron/analyze', async (req, res) => {
     res.json({ success: true, date: record.date });
   } catch (err) {
     console.error('[GET /cron/analyze]', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * GET /api/search?q=keyword
+ * DB에서 종목명/티커 prefix 검색 (드롭다운용)
+ */
+router.get('/search', requireAuth('user'), async (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (!q || q.length < 1) return res.json({ success: true, data: [] });
+  try {
+    const results = await searchStocks(q, 10);
+    res.json({ success: true, data: results });
+  } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 });

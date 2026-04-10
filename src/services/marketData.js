@@ -1,6 +1,7 @@
 'use strict';
 
 const config = require('../config');
+const { findByKoreanName } = require('./krxSearch');
 
 const YAHOO_BASE   = 'https://query2.finance.yahoo.com/v8/finance/chart';
 const YAHOO_SEARCH = 'https://query2.finance.yahoo.com/v1/finance/search';
@@ -274,10 +275,14 @@ async function findTicker(query) {
     } catch (_) { /* 무시 */ }
   }
 
-  // 한글 포함 시 티커 직접 입력 안내
+  // 한글 포함 시 KRX DB 조회
   const hasKorean = /[\uAC00-\uD7A3]/.test(trimmed);
   if (hasKorean) {
-    throw new Error(`한국 종목은 티커를 직접 입력하세요. (예: 삼성전자 → 005930.KS, SK하이닉스 → 000660.KS)`);
+    try {
+      const krx = await findByKoreanName(trimmed);
+      if (krx) return { ticker: krx.ticker, name: krx.name };
+    } catch (_) { /* DB 오류 시 폴백 */ }
+    throw new Error(`"${trimmed}" 종목을 찾을 수 없습니다. 티커로 직접 입력하세요. (예: 005930.KS)`);
   }
   throw new Error(`"${trimmed}"에 해당하는 종목을 찾을 수 없습니다.`);
 }

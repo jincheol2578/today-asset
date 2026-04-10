@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BarChart2, Search, Star, History, Users, Settings, LogOut, TrendingUp } from 'lucide-react';
+import { BarChart2, Search, Star, History, Users, Settings, LogOut, TrendingUp, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -85,6 +85,21 @@ export function Sidebar() {
             </ul>
           </>
         )}
+
+        {/* Telegram 커뮤니티 */}
+        <div className="mx-2 my-4 border-t border-[rgba(255,255,255,0.07)]" />
+        <a
+          href="https://t.me/+BNJb-_Nb9Wc4OWI9"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[#8d969e] transition-all duration-150 hover:bg-[rgba(255,255,255,0.05)] hover:text-[#f4f4f4]"
+        >
+          <MessageCircle className="h-4 w-4 text-[#2AABEE]" />
+          <div className="min-w-0">
+            <div className="text-sm">텔레그램 그룹</div>
+            <div className="text-[10px] text-[#505a63]">커뮤니티 참여</div>
+          </div>
+        </a>
       </nav>
 
       {/* User */}
