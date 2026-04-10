@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background-color: #030712;
+  color: #f3f4f6;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Prose-like markdown output */
+.prose-dark p { margin-bottom: 0.75rem; }
+.prose-dark ul { list-style: disc; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+.prose-dark ol { list-style: decimal; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+.prose-dark li { margin-bottom: 0.25rem; }
+.prose-dark h1, .prose-dark h2, .prose-dark h3 { font-weight: 600; margin-bottom: 0.5rem; color: #e5e7eb; }
+.prose-dark h1 { font-size: 1.25rem; }
+.prose-dark h2 { font-size: 1.1rem; }
+.prose-dark h3 { font-size: 1rem; }
+.prose-dark strong { color: #f9fafb; font-weight: 600; }
+.prose-dark code { background: #1f2937; padding: 0.1rem 0.3rem; border-radius: 0.25rem; font-size: 0.875rem; }
+.prose-dark hr { border-color: #374151; margin: 1rem 0; }
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+}

@@ -1,16 +1,25 @@
 'use strict';
 
 const express  = require('express');
+const cors     = require('cors');
 const config   = require('./config');
-const analysisRouter = require('./routes/analysis');
+const analysisRouter  = require('./routes/analysis');
+const watchlistRouter = require('./routes/watchlist');
+const adminRouter     = require('./routes/admin');
 const { startScheduler } = require('./services/scheduler');
 const telegram = require('./services/telegram');
 
 const app = express();
 
+// CORS — 프론트엔드 도메인 허용
+app.use(cors({
+  origin: [config.frontendUrl, 'http://localhost:3001'].filter(Boolean),
+  credentials: true,
+}));
+
 app.use(express.json());
 
-// Health check
+// Health check (인증 불필요)
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', model: config.openrouter.model, env: process.env.VERCEL ? 'vercel' : 'local' });
 });
@@ -24,6 +33,8 @@ if (config.telegram.botToken) {
 
 // API Routes
 app.use('/api', analysisRouter);
+app.use('/api/watchlist', watchlistRouter);
+app.use('/api/admin', adminRouter);
 
 // 404 handler
 app.use((req, res) => {
@@ -38,10 +49,8 @@ app.use((err, req, res, next) => {
 
 // ─── 실행 환경 분기 ────────────────────────────────────────────────────────────
 if (process.env.VERCEL) {
-  // Vercel 서버리스: 웹훅 모드로 Telegram 초기화 (폴링 불가)
   telegram.initWebhook().catch((e) => console.error('[Telegram webhook init]', e.message));
 } else {
-  // 로컬 개발: 일반 서버 시작 + cron 스케줄러 + 폴링 모드
   app.listen(config.port, () => {
     console.log(`[Server] http://localhost:${config.port}  model: ${config.openrouter.model}`);
     startScheduler();
@@ -49,5 +58,4 @@ if (process.env.VERCEL) {
   });
 }
 
-// Vercel이 Express 앱을 서버리스 함수로 사용하기 위해 export 필요
 module.exports = app;

@@ -7,10 +7,9 @@
     }
   ],
   "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "src/index.js"
-    }
+    { "src": "/health",            "dest": "src/index.js" },
+    { "src": "/telegram-webhook",  "dest": "src/index.js" },
+    { "src": "/api/(.*)",          "dest": "src/index.js" }
   ],
   "crons": [
     {

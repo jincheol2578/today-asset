@@ -9,6 +9,7 @@ const {
   findTicker, getCompanyOverview, formatCompanyForPrompt,
 } = require('../services/marketData');
 const { getMarketNews, getStockNews } = require('../services/news');
+const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -16,7 +17,7 @@ const router = express.Router();
  * POST /api/analyze
  * Body (선택): { "extraContext": "..." }
  */
-router.post('/analyze', async (req, res) => {
+router.post('/analyze', requireAuth('user'), async (req, res) => {
   try {
     const { extraContext } = req.body || {};
     const date = new Date().toISOString().slice(0, 10);
@@ -53,7 +54,7 @@ router.post('/analyze', async (req, res) => {
  * Body: { "query": "Apple 또는 AAPL", "extraContext": "..." }
  * query에 한글/영문 회사명 또는 티커 모두 가능
  */
-router.post('/stock', async (req, res) => {
+router.post('/stock', requireAuth('user'), async (req, res) => {
   try {
     const { query, extraContext } = req.body || {};
     if (!query) {
@@ -135,7 +136,7 @@ router.get('/cron/analyze', async (req, res) => {
 /**
  * GET /api/market
  */
-router.get('/market', async (req, res) => {
+router.get('/market', requireAuth('user'), async (req, res) => {
   try {
     const marketData = await getAllMarketData();
     res.json({ success: true, data: marketData });
@@ -147,7 +148,7 @@ router.get('/market', async (req, res) => {
 /**
  * GET /api/history
  */
-router.get('/history', async (req, res) => {
+router.get('/history', requireAuth('user'), async (req, res) => {
   try {
     const dates = await listAnalyses();
     res.json({ success: true, dates });
@@ -159,7 +160,7 @@ router.get('/history', async (req, res) => {
 /**
  * GET /api/history/:date
  */
-router.get('/history/:date', async (req, res) => {
+router.get('/history/:date', requireAuth('user'), async (req, res) => {
   const { date } = req.params;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return res.status(400).json({ success: false, error: '날짜 형식은 YYYY-MM-DD 이어야 합니다.' });
