@@ -1,26 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { TrendingUp } from 'lucide-react';
 import { getSupabaseClient } from '@/lib/supabase/client';
-import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { setProfile } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const supabase = getSupabaseClient();
-    supabase.auth.signOut().then(() => setProfile(null));
-  }, [setProfile]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

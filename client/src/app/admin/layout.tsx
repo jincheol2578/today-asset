@@ -1,10 +1,6 @@
-'use client';
-
 import { Sidebar } from '@/components/layout/Sidebar';
-import { useAuth } from '@/hooks/useAuth';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  useAuth();
   return (
     <div className="flex h-screen bg-[#191c1f]">
       <Sidebar />
