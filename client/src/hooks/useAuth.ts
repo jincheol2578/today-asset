@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import type { Session, AuthChangeEvent } from '@supabase/supabase-js';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { useAuthStore } from '@/store/authStore';
 import type { Profile } from '@/types';
@@ -24,7 +25,7 @@ export function useAuth() {
     };
 
     // getSession: 쿠키에서 직접 읽음 (네트워크 불필요, 빠름)
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }: { data: { session: Session | null } }) => {
       if (!mounted) return;
       if (session?.user) {
         const p = await fetchProfile(session.user.id);
@@ -38,7 +39,7 @@ export function useAuth() {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event: AuthChangeEvent, session: Session | null) => {
         if (!mounted) return;
 
         if (event === 'SIGNED_OUT') {
