@@ -2,7 +2,6 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Session, AuthChangeEvent } from '@supabase/supabase-js';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { useAuthStore } from '@/store/authStore';
 import type { Profile } from '@/types';
@@ -15,51 +14,39 @@ export function useAuth() {
     const supabase = getSupabaseClient();
     let mounted = true;
 
-    const fetchProfile = async (userId: string): Promise<Profile | null> => {
+    async function init() {
+      // localStorage에서 세션 읽기 — 새로고침해도 유지됨
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!mounted) return;
+
+      if (!session?.user) {
+        setLoading(false);
+        router.replace('/login');
+        return;
+      }
+
       const { data } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', userId)
+        .eq('id', session.user.id)
         .single();
-      return (data as Profile) ?? null;
-    };
 
-    // getSession: 쿠키에서 직접 읽음 (네트워크 불필요, 빠름)
-    supabase.auth.getSession().then(async ({ data: { session } }: { data: { session: Session | null } }) => {
+      if (mounted) {
+        setProfile((data as Profile) ?? null);
+        setLoading(false);
+      }
+    }
+
+    init();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (!mounted) return;
-      if (session?.user) {
-        const p = await fetchProfile(session.user.id);
-        if (mounted) {
-          setProfile(p);
-          setLoading(false);
-        }
-      } else {
-        if (mounted) setLoading(false);
+      if (event === 'SIGNED_OUT') {
+        setProfile(null);
+        setLoading(false);
+        router.replace('/login');
       }
     });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event: AuthChangeEvent, session: Session | null) => {
-        if (!mounted) return;
-
-        if (event === 'SIGNED_OUT') {
-          setProfile(null);
-          setLoading(false);
-          router.replace('/login');
-          return;
-        }
-
-        if (event === 'SIGNED_IN' && session?.user) {
-          const p = await fetchProfile(session.user.id);
-          if (mounted) {
-            setProfile(p);
-            setLoading(false);
-          }
-        }
-
-        // TOKEN_REFRESHED: 세션 갱신만 되므로 프로필 재조회 불필요
-      }
-    );
 
     return () => {
       mounted = false;
@@ -72,7 +59,6 @@ export function useAuth() {
     await supabase.auth.signOut();
     setProfile(null);
     router.replace('/login');
-    router.refresh(); // 서버 캐시 초기화 + 미들웨어 재실행
   };
 
   return { profile, loading, signOut };
